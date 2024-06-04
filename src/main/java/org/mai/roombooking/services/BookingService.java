@@ -75,9 +75,9 @@ public class BookingService {
      * @return детализированная информация по бронированию
      * @throws BookingNotFoundException бронирование, с заданным идентификатором, не найдено
      */
-    public RoomBookingDetailsDTO getBookingById(Long bookingId) throws BookingNotFoundException {
-        return new RoomBookingDetailsDTO(bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new BookingNotFoundException(bookingId)));
+    public Booking getBookingById(Long bookingId) throws BookingNotFoundException {
+        return bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
     }
 
     /**
@@ -85,8 +85,8 @@ public class BookingService {
      *
      * @return список всех бронирований
      */
-    public List<RoomBookingDTO> getAll() {
-        return bookingRepository.findAll().stream().map(RoomBookingDTO::new).toList();
+    public List<Booking> getAll() {
+        return bookingRepository.findAll().stream().toList();
     }
 
     /**
@@ -212,6 +212,14 @@ public class BookingService {
     }
 
 
+    public Optional<Booking> setStatus(Booking.Status status, Long bookingId) {
+        Optional<Booking> booking = bookingRepository.findById(bookingId);
+        if (booking.isEmpty()) return Optional.empty();
+
+        booking.get().setStatus(status);
+        return Optional.of(bookingRepository.save(booking.get()));
+    }
+
     /**
      * Удаляет отдельное бронирование на основе предоставленного идентификатора.
      *
@@ -269,23 +277,8 @@ public class BookingService {
                 .tags(dto.getTagsId().stream().map((id) -> tagRepository.findById(id).orElseThrow(() ->
                         new TagNotFoundException("tag whis id: " + id))).collect(Collectors.toSet()))
                 .recurringRule(recurringRule)
+                .status(dto.getStatus())
                 .build();
     }
 
-
-    private void validateBooking(@NonNull LocalDateTime start,
-                                 @NonNull LocalDateTime end,
-                                 @NonNull Long roomId) throws BookingException {
-        if (start.isAfter(end) || start.getDayOfYear() != end.getDayOfYear())
-            throw new BookingException("Booking exception");
-
-        var conflicts = bookingRepository.findBookingsInDateRange(start, end)
-                .stream()
-                .filter((bookingItem -> bookingItem.getRoom().getRoomId().equals(roomId)))
-                .map(RoomBookingDTO::new)
-                .toList();
-
-        if (!conflicts.isEmpty())
-            throw new BookingConflictException(conflicts);
-    }
 }

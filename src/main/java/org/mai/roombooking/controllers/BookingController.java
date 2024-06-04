@@ -1,32 +1,39 @@
 package org.mai.roombooking.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.mai.roombooking.dtos.bookings.Pair;
 import org.mai.roombooking.dtos.bookings.RoomBookingDTO;
-import org.mai.roombooking.dtos.bookings.RoomBookingDetailsDTO;
 import org.mai.roombooking.dtos.bookings.RoomBookingRequestDTO;
-import org.mai.roombooking.dtos.RoomDTO;
+import org.mai.roombooking.dtos.notifications.BookingNotificationDTO;
 import org.mai.roombooking.entities.Booking;
 import org.mai.roombooking.entities.User;
-import org.mai.roombooking.exceptions.BookingConflictException;
 import org.mai.roombooking.exceptions.BookingNotFoundException;
 import org.mai.roombooking.exceptions.RoomNotFoundException;
 import org.mai.roombooking.exceptions.UserNotFoundException;
 import org.mai.roombooking.exceptions.base.BookingException;
 import org.mai.roombooking.services.BookingService;
-import org.mai.roombooking.services.RoomService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * REST-контроллер для управления бронированиями.
@@ -35,16 +42,24 @@ import java.util.Objects;
 @RestController
 @RequestMapping("/api/bookings")
 public class BookingController {
-
+//    private final KafkaTemplate<String, String> kafkaTemplate;
     private final BookingService bookingService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ObjectMapper objectMapper;
+//    private final Producer<String, String> kafkaPproducer;
+
+    @Value("${kafka.notification.topic}")
+    private String notificationTopic;
 
     @Autowired
-    public BookingController(BookingService bookingService, SimpMessagingTemplate messagingTemplate) {
+    public BookingController(BookingService bookingService, SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper
+//                             Producer<String, String> kafkaPproducer
+    ) {
         this.bookingService = bookingService;
         this.messagingTemplate = messagingTemplate;
+        this.objectMapper = objectMapper;
+//        this.kafkaPproducer = kafkaPproducer;
     }
-
 
     /**
      * Метод получения всех бронирований, хранящихся в базе данных
@@ -52,7 +67,7 @@ public class BookingController {
      */ 
     @GetMapping("/all")
     public ResponseEntity<List<RoomBookingDTO>> getAll() {
-        return ResponseEntity.ok(bookingService.getAll());
+        return ResponseEntity.ok(bookingService.getAll().stream().map(RoomBookingDTO::new).toList());
     }
 
     /**
@@ -62,11 +77,11 @@ public class BookingController {
      * @throws BookingNotFoundException бронирование с заданным идентификатором не найдено
      */
     @GetMapping("/{bookingId}")
-    public ResponseEntity<RoomBookingDetailsDTO> getBooking(
+    public ResponseEntity<RoomBookingDTO> getBooking(
             @PathVariable Long bookingId) throws BookingNotFoundException {
 
-        RoomBookingDetailsDTO booking = bookingService.getBookingById(bookingId);
-        return ResponseEntity.ok(booking);
+        Booking booking = bookingService.getBookingById(bookingId);
+        return ResponseEntity.ok(new RoomBookingDTO(booking));
     }
 
 
@@ -111,7 +126,7 @@ public class BookingController {
      * @return ResponseEntity со списком бронирований для конкретного пользователя
      */
     @GetMapping("/user")
-    public ResponseEntity<List<RoomBookingDTO>> getBookingsByCUserInTimeRange(
+    public ResponseEntity<List<RoomBookingDTO>> getBookingsByUserInTimeRange(
             @RequestParam @NonNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
             @RequestParam @NonNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
             @AuthenticationPrincipal @NonNull User user) {
@@ -163,7 +178,7 @@ public class BookingController {
      * @param user авторизованный пользователя
      * @return список бронирований
      */
-    @GetMapping("/first{limit}/")
+    @GetMapping("/first{limit}")
     public List<RoomBookingDTO> getLimitBookingsByUser(
             @PathVariable @NonNull Integer limit,
             @AuthenticationPrincipal @NonNull User user) {
@@ -181,7 +196,7 @@ public class BookingController {
      * @throws UserNotFoundException если пользователь не найден по идентификатору
      */
     @PostMapping
-    public ResponseEntity<RoomBookingDetailsDTO> createBooking(
+    public ResponseEntity<RoomBookingDTO> createBooking(
             @RequestBody @NonNull RoomBookingRequestDTO request,
             @AuthenticationPrincipal @NonNull User user)
             throws BookingException, RoomNotFoundException, UserNotFoundException {
@@ -193,11 +208,16 @@ public class BookingController {
                 || user.getRole().equals(User.UserRole.ADMINISTRATOR)))
             throw new AccessDeniedException("Access denied: Not enough permissions");
 
+        if (user.getRole().equals(User.UserRole.AUTHORISED))
+            request.setStatus(Booking.Status.REQUIRES_CONFIRMATION);
+        else
+            request.setStatus(Booking.Status.CONFIRMED);
+
         Booking createdBooking = bookingService.updateBooking(request);
 
-        // TODO: не только добавление, но и изменение бронирования
         messagingTemplate.convertAndSend("/topic/1", "add new");
-        return ResponseEntity.ok(new RoomBookingDetailsDTO(createdBooking));
+        send_notification(createdBooking);
+        return ResponseEntity.ok(new RoomBookingDTO(createdBooking));
     }
 
     /**
@@ -207,11 +227,37 @@ public class BookingController {
      * @throws AccessDeniedException попытка добавления бронирования на другого пользователя без прав администратора
      */
     @PutMapping
-    public ResponseEntity<RoomBookingDetailsDTO> updateBooking(
+    public ResponseEntity<RoomBookingDTO> updateBooking(
             @RequestBody @NonNull RoomBookingRequestDTO request,
             @AuthenticationPrincipal @NonNull User user) throws BookingException {
+
+        if (request.getOwnerId() == null)
+            request.setOwnerId(user.getId());
+
+        if(!(Objects.equals(request.getOwnerId(), user.getId())
+                || user.getRole().equals(User.UserRole.ADMINISTRATOR)))
+            throw new AccessDeniedException("Access denied: Not enough permissions");
+
+        var savedBooking = bookingService.getBookingById(request.getId());
+        if (!savedBooking.getStatus().equals(request.getStatus()) &&
+                !user.getRole().equals(User.UserRole.ADMINISTRATOR))
+            throw new AccessDeniedException("Попытка изменения статуса бронирования без роли администратора");
+
+        Booking createdBooking = bookingService.updateBooking(request);
         messagingTemplate.convertAndSend("/topic/1", "add new");
-        return createBooking(request, user);
+        send_notification(savedBooking);
+        return ResponseEntity.ok(new RoomBookingDTO(createdBooking));
+    }
+
+    @PutMapping("/status")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public ResponseEntity<String> updateStatus(@RequestParam @NonNull Long bookingId,
+                                               @RequestParam @NonNull Booking.Status status) {
+        
+        Optional<Booking> booking = bookingService.setStatus(status, bookingId);
+        if (booking.isEmpty()) { return new ResponseEntity<>("Boking id not valid", HttpStatusCode.valueOf(400)); }
+        send_notification(booking.get());
+        return ResponseEntity.ok("Обновление статуса прошло успешно");
     }
 
     /**
@@ -234,7 +280,18 @@ public class BookingController {
 
         bookingService.deleteBooking(bookingId);
         messagingTemplate.convertAndSend("/topic/1", "add new");
+        send_notification(booking);
         return ResponseEntity.ok("Booking deleted successfully");
+    }
+
+    private void send_notification(Booking booking) {
+//        try {
+//            var bookingNotification = new BookingNotificationDTO(BookingNotificationDTO.Action.DELETE,
+//                    new RoomBookingDTO(booking));
+//            kafkaPproducer.send(new ProducerRecord<>(notificationTopic, objectMapper.writeValueAsString(bookingNotification)));
+//        } catch (JsonProcessingException e) {
+//            log.error("Error on parsing booking object. " + e.getMessage());
+//        }
     }
 
 }

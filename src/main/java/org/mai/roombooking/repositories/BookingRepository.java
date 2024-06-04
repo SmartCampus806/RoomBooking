@@ -60,4 +60,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b FROM Booking b WHERE b.owner.id = :ownerId")
     List<Booking> findByOwner(Long ownerId);
+
+    @Query("SELECT booking FROM Booking booking WHERE booking.status = :status")
+    List<Booking> findBookingsByStatus(Booking.Status status);
 }
