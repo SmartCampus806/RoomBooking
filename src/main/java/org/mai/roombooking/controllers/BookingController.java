@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+//import org.apache.kafka.clients.producer.Producer;
+//import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.mai.roombooking.dtos.bookings.Pair;
@@ -46,19 +48,20 @@ public class BookingController {
     private final BookingService bookingService;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
-//    private final Producer<String, String> kafkaPproducer;
+    private final Producer<String, String> kafkaPproducer;
 
     @Value("${kafka.notification.topic}")
     private String notificationTopic;
 
     @Autowired
-    public BookingController(BookingService bookingService, SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper
+    public BookingController(BookingService bookingService, SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper, Producer<String, String> kafkaPproducer
 //                             Producer<String, String> kafkaPproducer
     ) {
         this.bookingService = bookingService;
         this.messagingTemplate = messagingTemplate;
         this.objectMapper = objectMapper;
 //        this.kafkaPproducer = kafkaPproducer;
+        this.kafkaPproducer = kafkaPproducer;
     }
 
     /**
@@ -285,13 +288,14 @@ public class BookingController {
     }
 
     private void send_notification(Booking booking) {
-//        try {
-//            var bookingNotification = new BookingNotificationDTO(BookingNotificationDTO.Action.DELETE,
-//                    new RoomBookingDTO(booking));
-//            kafkaPproducer.send(new ProducerRecord<>(notificationTopic, objectMapper.writeValueAsString(bookingNotification)));
-//        } catch (JsonProcessingException e) {
-//            log.error("Error on parsing booking object. " + e.getMessage());
-//        }
+        try {
+            var bookingNotification = new BookingNotificationDTO(BookingNotificationDTO.Action.DELETE,
+                    new RoomBookingDTO(booking));
+            kafkaPproducer.send(new ProducerRecord<>(notificationTopic, objectMapper.writeValueAsString(bookingNotification)));
+            log.info("end kafka msg in {}\n msg text: {}", notificationTopic, objectMapper.writeValueAsString(bookingNotification));
+        } catch (JsonProcessingException e) {
+            log.error("Error on parsing booking object. {}", e.getMessage());
+        }
     }
 
 }

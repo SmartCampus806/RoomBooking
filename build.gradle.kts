@@ -62,6 +62,9 @@ dependencies {
     implementation("org.modelmapper:modelmapper:3.2.0")
 
     // Kafka
+    // https://mvnrepository.com/artifact/org.apache.kafka/kafka
+    implementation("org.apache.kafka:kafka_2.13:3.7.0")
+
     implementation("org.springframework.kafka:spring-kafka:3.1.3")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.0")
