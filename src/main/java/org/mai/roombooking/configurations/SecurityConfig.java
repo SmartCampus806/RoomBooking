@@ -28,7 +28,8 @@ public class SecurityConfig {
         httpSecurity.cors(Customizer.withDefaults()).csrf()
                 .disable()
                 .authorizeHttpRequests()
-                .requestMatchers("/api/auth/**", "/gs/**")
+                .requestMatchers("/api/auth/**", "/gs/**", "/api/bookings/all", "/api/bookings/room/**",
+                        "/api/bookings/group/**", "/api/bookings")
                 .permitAll()
                 .anyRequest()
                 .authenticated()
