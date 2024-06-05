@@ -220,7 +220,7 @@ public class BookingController {
         Booking createdBooking = bookingService.updateBooking(request);
 
         messagingTemplate.convertAndSend("/topic/1", "add new");
-        send_notification(createdBooking);
+        send_notification(BookingNotificationDTO.Action.CREATE, createdBooking);
         return ResponseEntity.ok(new RoomBookingDTO(createdBooking));
     }
 
@@ -249,7 +249,7 @@ public class BookingController {
 
         Booking createdBooking = bookingService.updateBooking(request);
         messagingTemplate.convertAndSend("/topic/1", "add new");
-        send_notification(savedBooking);
+        send_notification(BookingNotificationDTO.Action.UPDATE, savedBooking);
         return ResponseEntity.ok(new RoomBookingDTO(createdBooking));
     }
 
@@ -260,7 +260,7 @@ public class BookingController {
         
         Optional<Booking> booking = bookingService.setStatus(status, bookingId);
         if (booking.isEmpty()) { return new ResponseEntity<>("Boking id not valid", HttpStatusCode.valueOf(400)); }
-        send_notification(booking.get());
+        send_notification(BookingNotificationDTO.Action.UPDATE, booking.get());
         return ResponseEntity.ok("Обновление статуса прошло успешно");
     }
 
@@ -284,13 +284,13 @@ public class BookingController {
 
         bookingService.deleteBooking(bookingId);
         messagingTemplate.convertAndSend("/topic/1", "add new");
-        send_notification(booking);
+        send_notification(BookingNotificationDTO.Action.DELETE, booking);
         return ResponseEntity.ok("Booking deleted successfully");
     }
 
-    private void send_notification(Booking booking) {
+    private void send_notification(BookingNotificationDTO.Action action, Booking booking) {
         try {
-            var bookingNotification = new BookingNotificationDTO(BookingNotificationDTO.Action.DELETE,
+            var bookingNotification = new BookingNotificationDTO(action,
                     new RoomBookingDTO(booking));
             kafkaPproducer.send(new ProducerRecord<>(notificationTopic, objectMapper.writeValueAsString(bookingNotification)));
             log.info("send kafka msg in {}\n msg text: {}", notificationTopic, objectMapper.writeValueAsString(bookingNotification));
