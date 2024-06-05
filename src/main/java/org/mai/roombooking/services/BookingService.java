@@ -3,6 +3,7 @@ package org.mai.roombooking.services;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.mai.roombooking.dtos.PairDTO;
 import org.mai.roombooking.dtos.bookings.Pair;
 import org.mai.roombooking.dtos.bookings.RoomBookingDTO;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @AllArgsConstructor
+@Slf4j
 public class BookingService {
 
     private final BookingRepository bookingRepository;

@@ -204,6 +204,7 @@ public class BookingController {
             @AuthenticationPrincipal @NonNull User user)
             throws BookingException, RoomNotFoundException, UserNotFoundException {
 
+        log.info("Create {}", String.valueOf(request.getEndTime()));
         if (request.getOwnerId() == null)
             request.setOwnerId(user.getId());
 
@@ -292,7 +293,7 @@ public class BookingController {
             var bookingNotification = new BookingNotificationDTO(BookingNotificationDTO.Action.DELETE,
                     new RoomBookingDTO(booking));
             kafkaPproducer.send(new ProducerRecord<>(notificationTopic, objectMapper.writeValueAsString(bookingNotification)));
-            log.info("end kafka msg in {}\n msg text: {}", notificationTopic, objectMapper.writeValueAsString(bookingNotification));
+            log.info("send kafka msg in {}\n msg text: {}", notificationTopic, objectMapper.writeValueAsString(bookingNotification));
         } catch (JsonProcessingException e) {
             log.error("Error on parsing booking object. {}", e.getMessage());
         }

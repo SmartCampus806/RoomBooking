@@ -24,7 +24,7 @@ public class KafkaConfiguration {
     @Bean
     public  Producer<String, String> kafkaProducer(){
         Properties properties = new Properties();
-        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092"); // адрес брокера Kafka
+        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer); // адрес брокера Kafka
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
