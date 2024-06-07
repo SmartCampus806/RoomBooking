@@ -10,6 +10,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +28,7 @@ public class GroupController {
         return ResponseEntity.ok(groupRepository.findAll().stream().map(GroupDTO::new).toList());
     }
 
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @PostMapping("/update")
     public ResponseEntity<GroupDTO> update(@NonNull @RequestBody GroupDTO dto) {
         validationService.validate(dto);
@@ -34,6 +36,7 @@ public class GroupController {
         return ResponseEntity.ok(new GroupDTO(groupRepository.save(group)));
     }
 
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@NonNull @PathVariable Long id) {
         try { groupRepository.deleteById(id); }

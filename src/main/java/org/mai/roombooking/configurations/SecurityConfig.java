@@ -29,7 +29,8 @@ public class SecurityConfig {
                 .disable()
                 .authorizeHttpRequests()
                 .requestMatchers("/api/auth/**", "/gs/**", "/api/bookings/all", "/api/bookings/room/**",
-                        "/api/bookings/group/**", "/api/bookings")
+                        "/api/bookings/group/**", "/api/bookings", "/api/group/all", "/api/room/get/cathedral",
+                        "/api/room/all", "/api/tag/get/all", "/api/user/all", "/api/user/like/**", "/api/user/active")
                 .permitAll()
                 .anyRequest()
                 .authenticated()

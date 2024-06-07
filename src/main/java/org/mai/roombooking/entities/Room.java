@@ -51,4 +51,15 @@ public class Room {
     public int hashCode() {
         return Objects.hash(roomId, roomName, capacity, hasComputers, hasProjector, isCathedral);
     }
+
+    @Override
+    public String toString() {
+        return "Room{" +
+                "roomName='" + roomName + '\'' +
+                ", capacity=" + capacity +
+                ", hasComputers=" + hasComputers +
+                ", hasProjector=" + hasProjector +
+                ", isCathedral=" + isCathedral +
+                '}';
+    }
 }

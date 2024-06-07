@@ -3,6 +3,7 @@ package org.mai.roombooking.controllers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 //import org.apache.kafka.clients.producer.Producer;
@@ -20,6 +21,7 @@ import org.mai.roombooking.exceptions.RoomNotFoundException;
 import org.mai.roombooking.exceptions.UserNotFoundException;
 import org.mai.roombooking.exceptions.base.BookingException;
 import org.mai.roombooking.services.BookingService;
+import org.mai.roombooking.services.MetricsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -49,12 +51,13 @@ public class BookingController {
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
     private final Producer<String, String> kafkaPproducer;
+    private final MetricsService metricsService;
 
     @Value("${kafka.notification.topic}")
     private String notificationTopic;
 
     @Autowired
-    public BookingController(BookingService bookingService, SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper, Producer<String, String> kafkaPproducer
+    public BookingController(BookingService bookingService, SimpMessagingTemplate messagingTemplate, ObjectMapper objectMapper, Producer<String, String> kafkaPproducer, MetricsService metricsService
 //                             Producer<String, String> kafkaPproducer
     ) {
         this.bookingService = bookingService;
@@ -62,6 +65,7 @@ public class BookingController {
         this.objectMapper = objectMapper;
 //        this.kafkaPproducer = kafkaPproducer;
         this.kafkaPproducer = kafkaPproducer;
+        this.metricsService = metricsService;
     }
 
     /**
@@ -175,6 +179,32 @@ public class BookingController {
                 .toList());
     }
 
+
+    @GetMapping("/metrics")
+    public ResponseEntity<Metrics> mterics (
+            @RequestParam @NonNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            @RequestParam @NonNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
+
+        return ResponseEntity.ok(Metrics.builder()
+                .averageBookingZapolnennost(metricsService.averageBookingZapolnennost(startTime, endTime))
+                .roomPopularityIndex(metricsService.roomPopularityIndex(startTime, endTime))
+                .averageBookingDuration(metricsService.averageBookingDuration())
+                .roomUtilizationFrequency(metricsService.roomUtilizationFrequency(startTime, endTime))
+                .averageBookingDurationByRoom(metricsService.averageBookingDurationByRoom(startTime, endTime)).build());
+    }
+
+
+    @AllArgsConstructor
+    @Builder
+    static class Metrics {
+        Double averageBookingDuration;
+        MetricsService.Utilization roomUtilizationFrequency;
+        MetricsService.Utilization averageBookingDurationByRoom;
+        MetricsService.Utilization averageBookingZapolnennost;
+        Double roomPopularityIndex;
+    }
+
+
     /**
      * Получение предстоящих событий авторизованного пользователя
      * @param limit количество запрашиваемых событий
@@ -190,6 +220,7 @@ public class BookingController {
                 .map(RoomBookingDTO::new)
                 .toList();
     }
+
 
     /**
      * Создать бронирование.

@@ -52,4 +52,13 @@ public class Tag {
     public int hashCode() {
         return Objects.hash(id, fullName, shortName, color);
     }
+
+    @Override
+    public String toString() {
+        return "Tag{" +
+                "fullName='" + fullName + '\'' +
+                ", shortName='" + shortName + '\'' +
+                ", color='" + color + '\'' +
+                '}';
+    }
 }

@@ -66,4 +66,13 @@ public class Group implements Comparable<Group> {
     public int compareTo(Group o) {
         return Integer.compare(this.hashCode(), o.hashCode());
     }
+
+    @Override
+    public String toString() {
+        return "Group{" +
+                "name='" + name + '\'' +
+                ", size=" + size +
+                ", specialty='" + specialty + '\'' +
+                '}';
+    }
 }

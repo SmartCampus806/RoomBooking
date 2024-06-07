@@ -56,7 +56,6 @@ public class UserController {
      * @return список найденных пользователей
      */
     @GetMapping("/get/{pattern}")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public List<UserDTO> getLike(@NonNull @PathVariable String pattern) {
         return userService.findUsernameLike(pattern).stream()
                 .map(UserDTO::new)
