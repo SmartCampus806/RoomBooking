@@ -83,4 +83,8 @@ public class MetricsService {
         return new Utilization(rooms.stream().map(Room::getRoomName).toList(), data);
     }
 
+    public Double averageRoomPopularityIndex(LocalDateTime start, LocalDateTime end) {
+        return roomPopularityIndex(start, end).data.stream().mapToDouble(x -> x).average().orElse(0);
+    }
+
 }

@@ -190,7 +190,9 @@ public class BookingController {
                 .roomPopularityIndex(metricsService.roomPopularityIndex(startTime, endTime))
                 .averageBookingDuration(metricsService.averageBookingDuration())
                 .roomUtilizationFrequency(metricsService.roomUtilizationFrequency(startTime, endTime))
-                .averageBookingDurationByRoom(metricsService.averageBookingDurationByRoom(startTime, endTime)).build());
+                .averageBookingDurationByRoom(metricsService.averageBookingDurationByRoom(startTime, endTime))
+                .averageRoomPopularityIndex(metricsService.averageRoomPopularityIndex(startTime, endTime))
+                .build());
     }
 
 
@@ -198,6 +200,7 @@ public class BookingController {
         @Builder
         static class Metrics {
             Double averageBookingDuration;
+            Double averageRoomPopularityIndex;
             MetricsService.Utilization roomUtilizationFrequency;
             MetricsService.Utilization averageBookingDurationByRoom;
             MetricsService.Utilization averageBookingZapolnennost;
