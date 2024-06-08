@@ -323,14 +323,14 @@ public class BookingController {
     }
 
     private void send_notification(BookingNotificationDTO.Action action, Booking booking) {
-        try {
-            var bookingNotification = new BookingNotificationDTO(action,
-                    new RoomBookingDTO(booking));
-            kafkaPproducer.send(new ProducerRecord<>(notificationTopic, objectMapper.writeValueAsString(bookingNotification)));
-            log.info("send kafka msg in {}\n msg text: {}", notificationTopic, objectMapper.writeValueAsString(bookingNotification));
-        } catch (JsonProcessingException e) {
-            log.error("Error on parsing booking object. {}", e.getMessage());
-        }
+//        try {
+//            var bookingNotification = new BookingNotificationDTO(action,
+//                    new RoomBookingDTO(booking));
+//            kafkaPproducer.send(new ProducerRecord<>(notificationTopic, objectMapper.writeValueAsString(bookingNotification)));
+//            log.info("send kafka msg in {}\n msg text: {}", notificationTopic, objectMapper.writeValueAsString(bookingNotification));
+//        } catch (JsonProcessingException e) {
+//            log.error("Error on parsing booking object. {}", e.getMessage());
+//        }
     }
 
 }
