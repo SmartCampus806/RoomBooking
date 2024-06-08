@@ -68,7 +68,7 @@ public class MetricsService {
         return new Utilization(rooms.stream().map(Room::getRoomName).toList(), data);
     }
 
-    public double roomPopularityIndex(LocalDateTime start, LocalDateTime end) {
+    public Utilization roomPopularityIndex(LocalDateTime start, LocalDateTime end) {
         List<Room> rooms = roomService.getAllRooms();
         List<Double> data = new ArrayList<>();
         for (var room : rooms) {
@@ -78,9 +78,9 @@ public class MetricsService {
                     .average()
                     .orElse(0.0);
             var count = bookingService.getBookingsByRoomInTimeRange(room.getRoomId(), start, end).size();
-            data.add(average * count);
+            data.add(average * count / 840 * 100 );
         }
-        return data.stream().mapToDouble(x -> x).sum() / rooms.size();
+        return new Utilization(rooms.stream().map(Room::getRoomName).toList(), data);
     }
 
 }

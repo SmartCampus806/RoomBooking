@@ -194,15 +194,15 @@ public class BookingController {
     }
 
 
-    @AllArgsConstructor
-    @Builder
-    static class Metrics {
-        Double averageBookingDuration;
-        MetricsService.Utilization roomUtilizationFrequency;
-        MetricsService.Utilization averageBookingDurationByRoom;
-        MetricsService.Utilization averageBookingZapolnennost;
-        Double roomPopularityIndex;
-    }
+        @AllArgsConstructor
+        @Builder
+        static class Metrics {
+            Double averageBookingDuration;
+            MetricsService.Utilization roomUtilizationFrequency;
+            MetricsService.Utilization averageBookingDurationByRoom;
+            MetricsService.Utilization averageBookingZapolnennost;
+            MetricsService.Utilization roomPopularityIndex;
+        }
 
 
     /**
